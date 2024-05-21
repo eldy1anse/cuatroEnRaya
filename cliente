@@ -1,0 +1,78 @@
+#include <iostream>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <cstring>
+
+int main(int argc, char *argv[])
+{
+    if (argc != 3)
+    {
+        std::cerr << "Uso: " << argv[0] << " <IP del servidor> <puerto>" << std::endl;
+        return 1;
+    }
+
+    int puerto = std::atoi(argv[2]);
+    const char *ipServidor = argv[1];
+
+    int clienteSocket = socket(AF_INET, SOCK_STREAM, 0);
+    if (clienteSocket == -1)
+    {
+        std::cerr << "Error al crear el socket del cliente" << std::endl;
+        return 1;
+    }
+
+    struct sockaddr_in direccionServidor;
+    direccionServidor.sin_family = AF_INET;
+    direccionServidor.sin_port = htons(puerto);
+    inet_pton(AF_INET, ipServidor, &direccionServidor.sin_addr);
+
+    if (connect(clienteSocket, (struct sockaddr *)&direccionServidor, sizeof(direccionServidor)) == -1)
+    {
+        std::cerr << "Error al conectar con el servidor" << std::endl;
+        close(clienteSocket);
+        return 1;
+    }
+
+    std::cout << "Conectado al servidor " << ipServidor << ":" << puerto << std::endl;
+
+    char buffer[1024];
+    int bytesRecibidos = recv(clienteSocket, buffer, sizeof(buffer), 0);
+    if (bytesRecibidos <= 0)
+    {
+        std::cerr << "Error al recibir datos del servidor" << std::endl;
+        close(clienteSocket);
+        return 1;
+    }
+    buffer[bytesRecibidos] = '\0';
+    std::cout << buffer;
+
+    while (true)
+    {
+        bytesRecibidos = recv(clienteSocket, buffer, sizeof(buffer), 0);
+        if (bytesRecibidos <= 0)
+        {
+            std::cerr << "Error al recibir datos del servidor" << std::endl;
+            close(clienteSocket);
+            return 1;
+        }
+        buffer[bytesRecibidos] = '\0';
+        std::cout << buffer;
+
+        if (strstr(buffer, "Fin del juego.") != nullptr)
+        {
+            break;
+        }
+
+        int columna;
+        std::cin >> columna;
+        std::cin.ignore();
+
+        send(clienteSocket, std::to_string(columna).c_str(), sizeof(buffer), 0);
+    }
+
+    close(clienteSocket);
+
+    return 0;
+}
