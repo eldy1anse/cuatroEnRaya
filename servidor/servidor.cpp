@@ -118,6 +118,27 @@ int obtenerColumnaMaquina(const std::vector<std::vector<char>> &tablero)
     return columna;
 }
 
+void enviarTablero(int clienteSocket, const std::vector<std::vector<char>>& tablero)
+{
+    std::string mensajeTablero = "\nTablero:\n--------------------------\n\n";
+
+    for (size_t i = 0; i < tablero.size(); ++i)
+    {
+        for (size_t j = 0; j < tablero[i].size(); ++j)
+        {
+            mensajeTablero += tablero[i][j];
+            mensajeTablero += ' ';
+        }
+        mensajeTablero += '\n';
+    }
+
+    // Agregar la numeración de las columnas debajo del tablero
+    mensajeTablero += "-----------------\n";
+    mensajeTablero += "1 2 3 4 5 6 7\n";
+
+    enviarMensaje(clienteSocket, mensajeTablero);
+}
+
 void manejarCliente(int clienteSocket, const sockaddr_in &clienteDireccion)
 {
     std::string identificador = "cliente" + std::to_string(clienteSocket); // Identificador para el cliente
@@ -140,24 +161,14 @@ void manejarCliente(int clienteSocket, const sockaddr_in &clienteDireccion)
         realizarJugada(tablero, columnaInicial, 'S');
         std::cout << "Servidor juega con el cliente en la columna " << columnaInicial + 1 << std::endl << std::flush;
         enviarMensaje(clienteSocket, "El Servidor juega en la columna " + std::to_string(columnaInicial + 1) + "\n");
+
+        // Mostrar el tablero después de la jugada del servidor
+        enviarTablero(clienteSocket, tablero);
     }
 
     bool finJuego = false;
     while (!finJuego)
     {
-        std::string mensajeTablero = "\nTablero:\n--------------------------\n\n";
-        for (size_t i = 0; i < tablero.size(); ++i)
-        {
-            for (size_t j = 0; j < tablero[i].size(); ++j)
-            {
-                mensajeTablero += tablero[i][j];
-                mensajeTablero += ' ';
-            }
-            mensajeTablero += '\n';
-        }
-
-        enviarMensaje(clienteSocket, "\n--------------\n");
-        enviarMensaje(clienteSocket, mensajeTablero);
         enviarMensaje(clienteSocket, "Es tu turno. Introduce el número de la columna (1-7): ");
 
         char columna_buffer[1024];
@@ -179,8 +190,12 @@ void manejarCliente(int clienteSocket, const sockaddr_in &clienteDireccion)
 
         std::cout << "El cliente " << identificador << " juega en la columna " << columna + 1 << std::endl;
 
+        // Mostrar el tablero después de la jugada del cliente
+        enviarTablero(clienteSocket, tablero);
+
         if (verificarGanador(tablero, 'C'))
         {
+            enviarTablero(clienteSocket, tablero); // Mostrar el tablero final antes del mensaje de victoria
             enviarMensaje(clienteSocket, "\n¡Felicidades! ¡Has ganado!\nFin del juego.\n");
 
             std::cout << "El cliente " << identificador << " ha ganado la partida y se desconectó." << std::endl;
@@ -191,6 +206,7 @@ void manejarCliente(int clienteSocket, const sockaddr_in &clienteDireccion)
 
         if (verificarEmpate(tablero))
         {
+            enviarTablero(clienteSocket, tablero); // Mostrar el tablero final antes del mensaje de empate
             enviarMensaje(clienteSocket, "\n¡El juego ha terminado en empate!\nFin del juego.\n");
 
             std::cout << "El cliente " << identificador << " ha empatado con el servidor y se desconectó." << std::endl;
@@ -203,23 +219,14 @@ void manejarCliente(int clienteSocket, const sockaddr_in &clienteDireccion)
         realizarJugada(tablero, columnaMaquina, 'S');
         std::cout << "El servidor juega con el cliente en la columna " << columnaMaquina + 1 << std::endl;
 
-        std::string mensajeServidor = "\nEl Servidor juega en la columna: " + std::to_string(columnaMaquina + 1) + "\n";
+        enviarMensaje(clienteSocket, "\nEl Servidor juega en la columna: " + std::to_string(columnaMaquina + 1) + "\n");
 
-        mensajeTablero = "\nTablero:\n--------------------------\n\n";
-        for (size_t i = 0; i < tablero.size(); ++i)
-        {
-            for (size_t j = 0; j < tablero[i].size(); ++j)
-            {
-                mensajeTablero += tablero[i][j];
-                mensajeTablero += ' ';
-            }
-            mensajeTablero += '\n';
-        }
-        mensajeServidor += mensajeTablero;
-        enviarMensaje(clienteSocket, mensajeServidor);
+        // Mostrar el tablero después de la jugada del servidor
+        enviarTablero(clienteSocket, tablero);
 
         if (verificarGanador(tablero, 'S'))
         {
+            enviarTablero(clienteSocket, tablero); // Mostrar el tablero final antes del mensaje de victoria del servidor
             enviarMensaje(clienteSocket, "\n¡El servidor ha ganado!\nFin del juego.\n");
 
             std::cout << "El cliente " << identificador << " ha perdido la partida y se desconectó." << std::endl;
