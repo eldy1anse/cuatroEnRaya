@@ -4,27 +4,41 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 
-int main()
+void error(const char *msg)
 {
-    int clienteSocket;
-    struct sockaddr_in servidorDireccion;
+    perror(msg);
+    exit(EXIT_FAILURE);
+}
 
-    clienteSocket = socket(AF_INET, SOCK_STREAM, 0);
-    if (clienteSocket == -1)
-    {
-        std::cerr << "No se pudo crear el socket" << std::endl;
+int main(int argc, char *argv[])
+{
+    if (argc < 3) {
+        std::cerr << "Uso: " << argv[0] << " <direccion_ip> <puerto>" << std::endl;
         return -1;
     }
 
+    const char *direccionIP = argv[1];
+    int puerto = std::stoi(argv[2]);
+
+    int clienteSocket = socket(AF_INET, SOCK_STREAM, 0);
+    if (clienteSocket == -1)
+    {
+        error("No se pudo crear el socket");
+    }
+
+    struct sockaddr_in servidorDireccion;
+    std::memset(&servidorDireccion, 0, sizeof(servidorDireccion));
     servidorDireccion.sin_family = AF_INET;
-    servidorDireccion.sin_port = htons(8080);
-    servidorDireccion.sin_addr.s_addr = inet_addr("127.0.0.1");
+    servidorDireccion.sin_port = htons(puerto);
+
+    if (inet_pton(AF_INET, direccionIP, &servidorDireccion.sin_addr) <= 0)
+    {
+        error("Dirección IP no válida");
+    }
 
     if (connect(clienteSocket, (struct sockaddr *)&servidorDireccion, sizeof(servidorDireccion)) < 0)
     {
-        std::cerr << "Error al conectar con el servidor" << std::endl;
-        close(clienteSocket);
-        return -1;
+        error("Error al conectar con el servidor");
     }
 
     char buffer[1024];
@@ -41,6 +55,11 @@ int main()
             std::getline(std::cin, entrada);
             send(clienteSocket, entrada.c_str(), entrada.size(), 0);
         }
+    }
+
+    if (bytesRecibidos == -1)
+    {
+        error("Error al recibir datos del servidor");
     }
 
     close(clienteSocket);

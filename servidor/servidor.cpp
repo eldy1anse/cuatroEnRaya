@@ -289,9 +289,13 @@ void iniciarServidor(int puerto)
     close(servidorSocket);
 }
 
-int main()
+int main(int argc, char *argv[])
 {
     int puerto = 8080;
+    if (argc > 1)
+    {
+        puerto = std::stoi(argv[1]);
+    }
     iniciarServidor(puerto);
     return 0;
 }
